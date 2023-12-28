@@ -1,0 +1,74 @@
+seed: 42
+
+data:
+  image_dir: asset/sorter
+  transform_fp: ${data.image_dir}/transform.json
+  lora_ckpt_fp: ${data.image_dir}/lora.ckpt
+  demo_fp:  ${data.image_dir}/demo.png
+
+model:
+  name: zero123
+  args:
+    pretrained_model_name_or_path: ldm/ckpt/zero123-xl.ckpt
+    pretrained_config: ldm/ckpt/sd-objaverse-finetune-c_concat-256.yaml
+    vram_O: false
+
+pose:
+  image_dir: ${data.image_dir}
+  transform_fp: ${data.transform_fp}
+  demo_fp: ${data.demo_fp}
+  init_latlon: [[0, 0, 1], [0, 90, 1], [0, 180, 1], [0, -90, 1]]
+  default_theta: 0
+  default_azimuth: 0
+  default_radius: 1.0
+  default_latlon: ['${pose.default_theta}', '${pose.default_azimuth}', '${pose.default_radius}']
+  search_radius_range: 0.8
+  use_step_ratio: true
+
+  args:
+    max_step: 100
+    optimizer:
+      name: Adam
+      args:
+        lr: 1.0e-1
+        betas: [0.9, 0.999]
+    scheduler:
+      name: ReduceLROnPlateau
+      args:
+        mode: min
+        factor: 0.6
+        patience: 10
+
+finetune:
+  transform_fp: ${data.transform_fp}
+  lora_ckpt_fp: ${data.lora_ckpt_fp}
+  lora_rank: 12
+  lora_target_replace_module: [CrossAttention, GEGLU]
+
+  args:
+    max_step: 30
+    batch_size: 16
+    optimizer:
+      name: Adam
+      args:
+        lr: 1.0e-3
+        betas: [0.9, 0.999]
+    scheduler:
+      name: MultiStepLR
+      args:
+        milestones: [25]
+        gamma: 0.1
+
+inference:
+  transform_fp: ${data.transform_fp}
+  lora_ckpt_fp: ${data.lora_ckpt_fp}
+  demo_fp: ${data.demo_fp}
+  lora_rank: ${finetune.lora_rank}
+  lora_target_replace_module: ${finetune.lora_target_replace_module}
+  use_multi_view_condition: true
+  n_views: 8
+  theta: -20
+  radius: 1.0
+
+  args:
+    batch_size: 8
