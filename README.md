@@ -1,6 +1,6 @@
 # iFusion
 
-### [Project Page](https://chinhsuanwu.github.io/ifusion) | [Paper]()
+### [Project Page](https://chinhsuanwu.github.io/ifusion) | [Paper](https://arxiv.org/abs/2312.17250)
 
 This is the official implementation of [iFusion](), a framework that extends existing single-view reconstruction to pose-free sparse-view reconstruction by repurposing [Zero123](https://github.com/cvlab-columbia/zero123) for camera pose estimation.
 
@@ -39,6 +39,17 @@ You should see a NeRF-style `transform.json` in the same folder as the output of
 ![](https://github.com/chinhsuanwu/ifusion/assets/67839539/a5ac8b90-af95-4bd2-9a6a-077808a5fcaa)
 
 For 3D reconstruction, please check out [ifusion-threestudio](https://github.com/chinhsuanwu/ifusion-threestudio).
+
+## Citation
+
+```bibtex
+@article{wu2023ifusion,
+  author = {Wu, Chin-Hsuan and Chen, Yen-Chun, Solarte, Bolivar and Yuan, Lu and Sun, Min},
+  title = {iFusion: Inverting Diffusion for Pose-Free Reconstruction from Sparse Views},
+  journal = {arXiv preprint arXiv:2312.17250},
+  year = {2023}
+}
+```
 
 ## Acknowledgements
 This repo is a wild mixture of [zero123](https://github.com/cvlab-columbia/zero123), [threestudio](https://github.com/threestudio-project/threestudio), and [lora](https://github.com/cloneofsimo/lora). Kudos to the authors for their amazing work!
