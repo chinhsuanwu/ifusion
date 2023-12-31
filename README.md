@@ -30,7 +30,7 @@ Create an image directory that contains at least 2 images. Images can be preproc
 ```bash
 rembg i input.png output.png
 ```
-Run demo by specifing the image directory
+Run demo by specifying the image directory
 ```bash
 python main.py data.image_dir=asset/sorter
 ```
