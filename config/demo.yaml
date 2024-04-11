@@ -1,26 +1,10 @@
 seed: 42
 
 data:
-  name: GSO # OO3D
-  root_dir: rendering
-
-  scene: 3D_Dollhouse_Happy_Brother
-  id: 0,1
-
-  # train
-  image_dir: ${data.root_dir}/${data.name}/${data.scene}/train/rgb
-  gt_transform_fp: ${data.root_dir}/${data.name}/${data.scene}/train/transform.json
-
-  # test
-  test_image_dir: ${data.root_dir}/${data.name}/${data.scene}/test/rgb
-  test_transform_fp: ${data.root_dir}/${data.name}/${data.scene}/test/transform.json
-
-  # exp
-  exp_root_dir: exp
-  exp_dir: ${data.exp_root_dir}/${data.name}/${data.scene}/${data.id}
-  transform_fp: ${data.exp_dir}/transform.json
-  lora_ckpt_fp: ${data.exp_dir}/lora.ckpt
-  demo_fp:  ${data.exp_dir}/demo.png
+  image_dir: asset/sorter
+  transform_fp: ${data.image_dir}/transform.json
+  lora_ckpt_fp: ${data.image_dir}/lora.ckpt
+  demo_fp:  ${data.image_dir}/demo.png
 
 model:
   name: zero123
@@ -33,7 +17,7 @@ pose:
   image_dir: ${data.image_dir}
   transform_fp: ${data.transform_fp}
   demo_fp: ${data.demo_fp}
-  id: ${data.id}
+  id: all
   init_latlon: [[0, 0, 1], [0, 90, 1], [0, 180, 1], [0, -90, 1]]
   default_theta: 0
   default_azimuth: 0
@@ -80,16 +64,16 @@ finetune:
 inference:
   image_dir: ${data.image_dir}
   transform_fp: ${data.transform_fp}
-  test_transform_fp: ${data.test_transform_fp}
+  test_transform_fp: null
   lora_ckpt_fp: ${data.lora_ckpt_fp}
   demo_fp: ${data.demo_fp}
   lora_rank: ${finetune.lora_rank}
   lora_target_replace_module: ${finetune.lora_target_replace_module}
   use_single_view: false
   use_multi_view_condition: true
-  n_views: null
-  theta: null
-  radius: null
+  n_views: 8
+  theta: -20
+  radius: 1.0
 
   args:
     batch_size: 8

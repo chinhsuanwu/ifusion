@@ -16,29 +16,60 @@ This is the official implementation of [iFusion](), a framework that extends exi
 ```bash
 git clone https://github.com/chinhsuanwu/ifusion.git
 cd ifusion
+
+# conda environment.yaml is also available
 pip install -r requirements.txt
 ```
-
-Download Zero123-XL and place it under `ldm/ckpt`
+Download Zero123-XL to `ldm/ckpt`
 ```bash
-cd ldm/ckpt && wget https://zero123.cs.columbia.edu/assets/zero123-xl.ckpt
+wget https://zero123.cs.columbia.edu/assets/zero123-xl.ckpt -P ldm/ckpt
 ```
 
-## Usage
+## Quick Start
 
-Create an image directory that contains at least 2 images. Images can be preprocessed through
+Run demo by specifying the image directory containing 2+ images
 ```bash
-rembg i input.png output.png
+python demo.py data.image_dir=asset/sorter
 ```
-Run demo by specifing the image directory
-```bash
-python main.py data.image_dir=asset/sorter
-```
-You should see a NeRF-style `transform.json` in the same folder as the output of the pose optimization and `lora.ckpt` after the sparse-view fine-tuning stage. Qualitative visualization of novel view synthesis is shown at `demo.png` as follows. Please refer to `config/main.yaml` for detailed hyper-parameters.
+The output includes a NeRF-style `transform.json` file (from camera pose estimation), `lora.ckpt` (from fine-tuning), and `demo.png` (from fine-tuning, as shown below), all located in the given directory.
 
 ![](https://github.com/chinhsuanwu/ifusion/assets/67839539/a5ac8b90-af95-4bd2-9a6a-077808a5fcaa)
 
+One can also run a quick ablation without including our method, i.e., the original single-view Zero123, for comparison
+```bash
+python demo.py data.image_dir=asset/sorter \
+               data.demo_fp=asset/sorter/demo_single_view.png \
+               inference.use_single_view=true
+```
+![](https://github.com/chinhsuanwu/ifusion/assets/67839539/b683f37d-fb4a-44ff-a7f2-e74c760d208b)
+
+
 For 3D reconstruction, please check out [ifusion-threestudio](https://github.com/chinhsuanwu/ifusion-threestudio).
+
+## Evaluation
+```bash
+# download the renderings for GSO and OO3D
+bash download_data.sh
+
+# camera pose estimation
+python main.py --pose \
+               --gpu_ids=0,1,2,3 \
+               data.root_dir=rendering \
+               data.name=GSO \
+               data.exp_root_dir=exp
+
+# novel view synthesis
+python main.py --nvs \
+               --gpu_ids=0,1,2,3 \
+               data.root_dir=rendering \
+               data.name=GSO \
+               data.exp_root_dir=exp
+
+# evaluation
+python eval.py --pose
+python eval.py --nvs
+```
+Please refer to `config/main.yaml` for detailed hyper-parameters and arguments.
 
 ## Citation
 

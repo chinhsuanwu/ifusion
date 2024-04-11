@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from dataset.base import BaseDataset
+from dataset.base import BaseDataset, load_frames
 from util.pose import latlon2mat
 from util.typing import *
 from util.util import load_image
@@ -26,7 +26,9 @@ class SingleImageInferenceDataset(Dataset, BaseDataset):
     def __init__(
         self,
         image_fp: str = None,
+        image_dir: str = None,
         transform_fp: str = None,
+        test_transform_fp: str = None,
         n_views: int = 8,
         theta: int = -20,
         radius: float = 1.0,
@@ -36,12 +38,15 @@ class SingleImageInferenceDataset(Dataset, BaseDataset):
             self.image = load_image(image_fp, device="cpu").squeeze(0)
             self.camtoworld = latlon2mat(torch.tensor([default_latlon]))
         elif transform_fp:
-            self.setup(transform_fp)
+            self.setup(image_dir, transform_fp)
             self.image, self.camtoworld = self.all_images[0], self.all_camtoworlds[0]
         else:
             raise ValueError("Either image_fp or transform_fp must be provided.")
 
-        self.infer_camtoworlds = make_circular_poses(n_views, theta, radius)
+        if test_transform_fp:
+            self.infer_camtoworlds = load_frames(None, test_transform_fp, return_images=False)[1]
+        else:
+            self.infer_camtoworlds = make_circular_poses(n_views, theta, radius)
 
     def __len__(self):
         return len(self.infer_camtoworlds)
@@ -70,13 +75,18 @@ class SingleImageInferenceDataset(Dataset, BaseDataset):
 class MultiImageInferenceDataset(Dataset, BaseDataset):
     def __init__(
         self,
-        transform_fp,
-        n_views: int,
-        theta: int,
-        radius: float,
+        image_dir: str = None,
+        transform_fp: str = None,
+        test_transform_fp: str = None,
+        n_views: int = 8,
+        theta: int = -20,
+        radius: float = 1.0,
     ):
-        self.setup(transform_fp)
-        self.infer_camtoworlds = make_circular_poses(n_views, theta, radius)
+        self.setup(image_dir, transform_fp)
+        if test_transform_fp:
+            self.infer_camtoworlds = load_frames(image_dir, test_transform_fp, return_images=False)[1]
+        else:
+            self.infer_camtoworlds = make_circular_poses(n_views, theta, radius)
 
     def __len__(self):
         return len(self.infer_camtoworlds)

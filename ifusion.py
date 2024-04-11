@@ -1,5 +1,6 @@
 import json
 from glob import glob
+import os
 
 import numpy as np
 import torch
@@ -11,7 +12,7 @@ from dataset.finetune import FinetuneIterableDataset
 from dataset.inference import MultiImageInferenceDataset, SingleImageInferenceDataset
 from util.pose import latlon2mat, make_T, mat2latlon
 from util.typing import *
-from util.util import load_image, parse_optimizer, parse_scheduler
+from util.util import load_image, parse_optimizer, parse_scheduler, str2list
 from util.viz import plot_image
 
 
@@ -122,21 +123,22 @@ def optimize_pose(
     image_dir: str,
     transform_fp: str,
     demo_fp: str,
+    id: str,
     default_latlon: List[float] = [0, 0, 1],
     **kwargs,
 ):
     image_fps = sorted(glob(image_dir + "/*.png") + glob(image_dir + "/*.jpg"))
     image_fps = [fp for fp in image_fps if fp != demo_fp]
 
-    # FIXME: always pick the first image as reference
-    ref_image = load_image(image_fps[0])
-    qry_images = [load_image(image_fps[i]) for i in range(1, len(image_fps))]
+    id = list(range(len(image_fps))) if id == "all" else str2list(id)
+    ref_image = load_image(image_fps[id[0]])
+    qry_images = [load_image(image_fps[i]) for i in id[1:]]
 
     out_dict = {"camera_angle_x": np.deg2rad(49.1), "frames": []}
     out_dict["frames"].append(
         {
             "file_path": image_fps[0].replace(image_dir + "/", ""),
-            "transform_matrix": latlon2mat(torch.tensor([default_latlon])).tolist(),
+            "transform_matrix": latlon2mat(torch.tensor([default_latlon])).squeeze(0).tolist(),
             "latlon": list(default_latlon),
         }
     )
@@ -149,18 +151,20 @@ def optimize_pose(
         out_dict["frames"].append(
             {
                 "file_path": qry_fp.replace(image_dir + "/", ""),
-                "transform_matrix": latlon2mat(pose.clone()).tolist(),
+                "transform_matrix": latlon2mat(pose.clone()).squeeze(0).tolist(),
                 "latlon": pose.squeeze().tolist(),
             }
         )
 
     # save poses to json
+    os.makedirs(os.path.dirname(transform_fp), exist_ok=True)
     with open(transform_fp, "w") as f:
         json.dump(out_dict, f, indent=4)
 
 
 def finetune(
     model,
+    image_dir: str,
     transform_fp: str,
     lora_ckpt_fp: str,
     lora_rank: int,
@@ -172,7 +176,7 @@ def finetune(
         target_replace_module=lora_target_replace_module,
     )
 
-    train_dataset = FinetuneIterableDataset(transform_fp)
+    train_dataset = FinetuneIterableDataset(image_dir, transform_fp)
     train_loader = train_dataset.loader(args.batch_size)
     optimizer = parse_optimizer(args.optimizer, model.require_grad_params)
     scheduler = parse_scheduler(args.scheduler, optimizer)
@@ -198,25 +202,28 @@ def finetune(
 
 def inference(
     model,
+    image_dir: str,
     transform_fp: str,
+    test_transform_fp: str,
     lora_ckpt_fp: str,
     demo_fp: str,
     lora_rank: int,
     lora_target_replace_module: List[str],
+    use_single_view: bool,
     use_multi_view_condition: bool,
     n_views: int,
     theta: float,
     radius: float,
     args,
 ):
-    if lora_ckpt_fp:
+    if not use_single_view and lora_ckpt_fp:
         model.inject_lora(
             ckpt_fp=lora_ckpt_fp,
             rank=lora_rank,
             target_replace_module=lora_target_replace_module,
         )
 
-    if use_multi_view_condition:
+    if not use_single_view and use_multi_view_condition:
         test_dataset = MultiImageInferenceDataset
         generate_fn = model.generate_from_tensor_multi_cond
     else:
@@ -224,7 +231,7 @@ def inference(
         generate_fn = model.generate_from_tensor
 
     test_dataset = test_dataset(
-        transform_fp=transform_fp, n_views=n_views, theta=theta, radius=radius
+        image_dir=image_dir, transform_fp=transform_fp, test_transform_fp=test_transform_fp, n_views=n_views, theta=theta, radius=radius
     )
     test_loader = test_dataset.loader(args.batch_size)
     for batch in test_loader:
@@ -241,5 +248,6 @@ def inference(
 
     out = rearrange(out, "b c h w -> 1 c h (b w)")
     plot_image(out, fp=demo_fp)
+    print(f"[INFO] Saved image to {demo_fp}")
 
     return out

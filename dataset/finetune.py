@@ -6,8 +6,8 @@ from dataset.base import BaseDataset
 
 
 class FinetuneDataset(Dataset, BaseDataset):
-    def __init__(self, transform_fp):
-        self.setup(transform_fp)
+    def __init__(self, image_dir, transform_fp):
+        self.setup(image_dir, transform_fp)
 
     def __len__(self):
         return len(self.perm)
@@ -35,8 +35,8 @@ class FinetuneDataset(Dataset, BaseDataset):
 
 
 class FinetuneIterableDataset(IterableDataset, FinetuneDataset):
-    def __init__(self, transform_fp):
-        super().__init__(transform_fp)
+    def __init__(self, image_dir, transform_fp):
+        super().__init__(image_dir, transform_fp)
 
     def __iter__(self):
         while True:

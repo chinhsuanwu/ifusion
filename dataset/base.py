@@ -10,43 +10,58 @@ from util.typing import *
 from util.util import load_image
 
 
+def load_frames(
+    image_dir: str = None,
+    transform_fp: str = None,
+    return_images=True,
+    to_clip=True,
+    verbose=True,
+):
+    """Load images from disk."""
+    if not transform_fp.startswith("/"):
+        # allow relative path
+        transform_fp = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..",
+            transform_fp,
+        )
+
+    with open(transform_fp, "r") as fp:
+        meta = json.load(fp)
+
+    all_images = []
+    all_camtoworlds = []
+    all_latlons = []
+    for i in range(len(meta["frames"])):
+        frame = meta["frames"][i]
+
+        if return_images:
+            fp = os.path.join(image_dir, frame["file_path"])
+            all_images.append(
+                load_image(fp, device="cpu", to_clip=to_clip, verbose=verbose)
+            )
+
+        all_camtoworlds.append(torch.tensor([frame["transform_matrix"]]))
+        all_latlons.append(torch.tensor([frame["latlon"]]))
+
+    if return_images:
+        all_images = torch.cat(all_images)
+
+    all_camtoworlds = torch.cat(all_camtoworlds)
+    all_latlons = torch.cat(all_latlons)
+
+    return all_images, all_camtoworlds, all_latlons
+
+
 class BaseDataset:
-    def setup(self, transform_fp):
-        self.all_images, self.all_camtoworlds = self._load_frames(transform_fp)
+    def setup(self, image_dir, transform_fp):
+        self.all_images, self.all_camtoworlds, _ = load_frames(image_dir, transform_fp)
 
         assert len(self.all_camtoworlds) == len(self.all_images)
         assert self.all_images.shape[2:] == (256, 256)
 
         self.perm = list(itertools.permutations(range(len(self.all_images)), 2))
         self.perm = torch.from_numpy(np.array(self.perm))
-
-    @staticmethod
-    def _load_frames(transform_fp):
-        """Load images from disk."""
-        if not transform_fp.startswith("/"):
-            # allow relative path
-            transform_fp = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                transform_fp,
-            )
-
-        image_dir = os.path.dirname(transform_fp)
-        with open(transform_fp, "r") as fp:
-            meta = json.load(fp)
-
-        all_images = []
-        all_camtoworlds = []
-        for i in range(len(meta["frames"])):
-            frame = meta["frames"][i]
-            fp = os.path.join(image_dir, frame["file_path"])
-            all_images.append(load_image(fp, device="cpu"))
-            all_camtoworlds.append(torch.tensor(frame["transform_matrix"]))
-
-        all_images = torch.cat(all_images)
-        all_camtoworlds = torch.cat(all_camtoworlds)
-
-        return all_images, all_camtoworlds
 
     def get_trans(self, target_camtoworld, cond_camtoworld, in_T=True, verbose=False):
         """Returns the relative transformation from cond to target"""

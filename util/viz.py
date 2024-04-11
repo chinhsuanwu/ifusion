@@ -5,6 +5,7 @@ from PIL import Image
 
 # visual images
 def plot_image(*xs, normalize=False, fp="out.png"):
+    # original code: https://github.com/ashawkey/kiuikit
     # x: [B, 3, H, W], [3, H, W], [1, H, W] or [H, W] torch.Tensor
     #    [B, H, W, 3], [H, W, 3], [H, W, 1] or [H, W] numpy.ndarray
 

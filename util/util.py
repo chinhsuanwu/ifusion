@@ -8,12 +8,18 @@ import torch
 from omegaconf import OmegaConf
 from PIL import Image
 
+str2list = lambda x: list(map(int, x.split(",")))
+
+
+def split_list(lst, n):
+    k, m = divmod(len(lst), n)
+    return [lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)]
+
 
 def load_config(*yaml_files, cli_args=[]):
     yaml_confs = [OmegaConf.load(f) for f in yaml_files]
     cli_conf = OmegaConf.from_cli(cli_args)
     conf = OmegaConf.merge(*yaml_confs, cli_conf)
-    OmegaConf.resolve(conf)
     return conf
 
 
@@ -33,7 +39,7 @@ def parse_model(config):
     return model
 
 
-def load_image(fp, to_clip=True, verbose=True, device="cuda"):
+def load_image(fp, resize=True, to_clip=True, verbose=True, device="cuda"):
     if verbose:
         print(f"[INFO] Loading image {fp}")
 
@@ -42,7 +48,8 @@ def load_image(fp, to_clip=True, verbose=True, device="cuda"):
         image[image[..., -1] < 128] = [255] * 4
         image = image[..., :3]
 
-    image = cv2.resize(image, (256, 256), interpolation=cv2.INTER_AREA)
+    if resize:
+        image = cv2.resize(image, (256, 256), interpolation=cv2.INTER_AREA)
     image = image.astype(np.float32) / 255.0
     image = torch.from_numpy(image).contiguous().to(device)
     image = image.permute(2, 0, 1).unsqueeze(0)

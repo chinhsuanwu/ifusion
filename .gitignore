@@ -14,3 +14,7 @@ __pycache__/
 *ckpt/
 *log/
 *out/
+*exp/
+
+# Data
+*rendering/
